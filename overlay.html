@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050914">
+  <title>MOOREX AI — Orb</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body {
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      font-family: "Exo 2", Inter, system-ui, sans-serif; color: #f2f7fd; -webkit-font-smoothing: antialiased;
+      background: radial-gradient(ellipse at 50% 88%, rgba(20,70,80,.6), rgba(2,8,16,.94) 62%);
+    }
+    body.clear { background: transparent; }            /* overlay.html?bg=clear for a see-through overlay */
+    .captions { flex: 1; width: min(92%, 560px); overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 56px 6px 10px; text-align: center; }
+    .user { margin: 0; color: #9fb6cc; font-size: 16px; line-height: 1.4; min-height: 1.4em; }
+    .reply { margin: 0; font-size: 20px; line-height: 1.45; font-weight: 500; text-shadow: 0 2px 14px rgba(0,0,0,.5); }
+    .stage { width: min(86vw, 360px); aspect-ratio: 1; flex: none; cursor: pointer; }
+    canvas { width: 100%; height: 100%; display: block; }
+    .state { margin: 0 0 calc(18px + env(safe-area-inset-bottom)); font-family: Orbitron, "Segoe UI", sans-serif; font-size: 11.5px; letter-spacing: .2em; color: #8ee4c1; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="captions"><p class="user" id="u"></p><p class="reply" id="r">Waiting for MOOREX… open more.html in the same browser.</p></div>
+  <div class="stage" id="stage" role="button" tabindex="0" aria-label="Tap to speak or stop"><canvas id="c"></canvas></div>
+  <p class="state" id="s">WAITING FOR MOOREX…</p>
+  <script src="js/morex-orb-core.js"></script>
+  <script>
+  "use strict";
+  (() => {
+    if (new URLSearchParams(location.search).get("bg") === "clear") document.body.classList.add("clear");
+    const LABELS = { idle: "TAP THE ORB TO SPEAK", listening: "LISTENING…", thinking: "THINKING…", speaking: "SPEAKING · TAP TO STOP", error: "TAP TO TRY AGAIN" };
+    let st = "idle", bump = 0, connected = false;
+    const $ = (id) => document.getElementById(id);
+    window.MorexOrbCore.start($("c"), { getState: () => st, getLevel: () => {
+      const t = performance.now() / 1000;
+      if (st === "speaking") return 0.35 + 0.35 * Math.abs(Math.sin(t * 7.3) * Math.sin(t * 2.9 + 0.6));
+      return performance.now() < bump ? 0.6 : 0;
+    }});
+    const ch = "BroadcastChannel" in window ? new BroadcastChannel("morex-link") : null;
+    if (!ch) { $("r").textContent = "This browser cannot link to MOOREX."; return; }
+    ch.onmessage = (e) => {
+      const m = e.data || {};
+      if (m.type === "state") { connected = true; st = m.state; $("s").textContent = LABELS[st] || LABELS.idle; }
+      else if (m.type === "caption") { connected = true; if (m.user) $("u").textContent = m.user; if (m.reply) $("r").textContent = m.reply; }
+      else if (m.type === "interim") { $("u").textContent = m.text || ""; bump = performance.now() + 220; }
+    };
+    const tap = () => ch.postMessage({ type: "command", cmd: "toggle" });
+    $("stage").addEventListener("click", tap);
+    $("stage").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tap(); } });
+    ch.postMessage({ type: "hello" });
+    setTimeout(() => { if (!connected) $("s").textContent = "OPEN MOOREX (more.html) TO CONNECT"; }, 1500);
+  })();
+  </script>
+</body>
+</html>
