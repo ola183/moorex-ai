@@ -2,23 +2,42 @@
 // Node 18+. Keep both API keys in server/.env (never in browser code).
 "use strict";
 const express = require("express");
-const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 const app = express();
-app.use(express.json({ limit: "12mb" }));
+app.disable("x-powered-by");
+app.use(express.json({ limit: "24mb", strict: true }));
 
 const allowed = (process.env.ALLOWED_ORIGIN || "").split(",").map(s => s.trim()).filter(Boolean);
-app.use(cors({ origin(origin, cb) {
-  if (!origin || allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
-  return cb(new Error("Origin not allowed"));
-}}));
+app.use((req, res, next) => {
+  const origin = req.get("Origin");
+  if (!origin) return next();
+  let sameOrigin = false;
+  try { sameOrigin = new URL(origin).host === req.get("host"); } catch { /* malformed origin */ }
+  if (!sameOrigin && !allowed.includes(origin)) return res.status(403).json({ error: "Origin not allowed" });
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+// Serve the browser interface from this same service. Only public frontend
+// folders are exposed; server/.env and backend source files stay private.
+const appRoot = path.resolve(__dirname, "..");
+app.use("/assets", express.static(path.join(appRoot, "assets"), { fallthrough: false }));
+app.use("/css", express.static(path.join(appRoot, "css"), { fallthrough: false }));
+app.use("/js", express.static(path.join(appRoot, "js"), { fallthrough: false }));
+app.get(["/", "/more.html"], (_req, res) => res.sendFile(path.join(appRoot, "more.html")));
+app.get("/overlay.html", (_req, res) => res.sendFile(path.join(appRoot, "overlay.html")));
 
 const timeoutMs = Number(process.env.AI_TIMEOUT_MS || 20000);
 const timeoutSignal = () => AbortSignal.timeout(timeoutMs);
 
 app.get("/api/health", (_req, res) => {
   res.json({
-    ok: true, service: "MorexAI",
+    ok: true, service: "MorexAI", frontendServed: true,
     primary: "Gemini",
     primaryConfigured: Boolean(process.env.GEMINI_API_KEY),
     backup: "Groq",
@@ -103,7 +122,7 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "Send 1–40 messages." });
 
   const memoryText = Array.isArray(memories)
-    ? memories.slice(0, 100).map(m => typeof m === "string" ? m : m.content).filter(Boolean).join("\\n- ")
+    ? memories.slice(0, 100).map(m => typeof m === "string" ? m : m.content).filter(Boolean).join("\n- ")
     : "";
   const { systemText, clean } = cleanMessages(messages, memoryText);
   const attachments = cleanAttachments(req.body?.attachments);
@@ -170,4 +189,4 @@ app.post("/api/image", async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 8787);
-app.listen(port, () => console.log(`MorexAI API listening on http://localhost:${port}`));
+app.listen(port, "0.0.0.0", () => console.log(`MorexAI listening on port ${port}`));

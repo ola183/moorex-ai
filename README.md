@@ -30,15 +30,23 @@ MOOREX automatically speaks each completed assistant answer. The browser's avail
 3. Run `npm install`.
 4. Copy `.env.example` to `.env` and enter the API keys and settings required by your backend.
 5. Run `npm start`.
-6. Serve the `MorexAI` folder using a local web server or deploy it over HTTPS. The browser page's default backend URL is `http://localhost:8787`; change `window.MOREXAI_API_URL` in `more.html` when the backend is hosted elsewhere.
+6. Open `http://localhost:8787` in your browser. The Node server serves the frontend and API from the same origin. If you host the frontend separately, set `window.MOREXAI_API_URL` before the dashboard scripts load to the full HTTPS backend origin.
 
 The browser page must be opened over HTTPS or localhost for secure browser features such as Web Crypto and microphone permission. Opening the HTML directly from a file manager may disable some features.
+
+## Deploy as one Render web service
+
+This repository includes `render.yaml`. Connect the repository to Render and create the service from the Blueprint. Render installs dependencies from `server/package.json` and starts `server/server.js`; the same service serves the website and `/api/chat`, `/api/image`, and `/api/health`.
+
+In the Render service environment settings, add `GEMINI_API_KEY`. Add `GROQ_API_KEY` if you want the automatic backup provider. Do not put either key in `more.html`, JavaScript, GitHub, or a public `.env` file. The `.env.example` file contains placeholders only. After deployment, open the service URL and check `/api/health`; `primaryConfigured` and `backupConfigured` report whether each key is present, not whether the provider account has remaining quota.
+
+For a separate frontend host, set `ALLOWED_ORIGIN` to its exact origin (including `https://`, comma-separated if needed). Same-origin hosting through the included Render service does not require this setting.
 
 ## Voice and camera limitations
 
 Browser speech recognition and speech synthesis depend on the browser and operating system. Microphone input starts after the user taps Speak and grants permission. A true always-listening "Hey MOOREX" wake phrase, lock-screen operation, and continuous background listening require a native Android implementation and are not enabled by this web project.
 
-The camera, file upload and some workspace panels remain planned features where the current UI labels them as not yet connected.
+The file attachment and image/camera panel support the browser features described below. Camera access still requires a supported browser, HTTPS (or localhost), and the user's permission. Workspace panels that are labelled as unavailable are not connected to external services.
 
 ## Face motion, sidebar and typography (this revision)
 
@@ -83,3 +91,14 @@ The camera, file upload and some workspace panels remain planned features where 
 - Image creation: type something like "Create an image of a golden lion", "draw a cat" or "/image sunset". MOOREX shows the picture in the chat with a Download image link.
 - Image creation uses a Gemini image model through the server (`/api/image`). Set `GEMINI_IMAGE_MODEL` in `server/.env` (default `gemini-2.5-flash-image`; Google also documents `gemini-3.1-flash-image`). Whether your key may use image models, and how many images it allows, depends on your Google plan.
 - Restart the server after updating (`node server.js` in the `server` folder).
+
+
+## GitHub folder layout
+
+Keep the folders intact: `assets/`, `css/`, `js/`, and `server/` must remain alongside `more.html`, `overlay.html`, `README.md`, and `render.yaml`. Do not upload the contents of these folders flattened into the repository root.
+
+## Account and release-readiness notes
+
+The first-use name/password screen is a local browser-profile gate, not server authentication. It is suitable only for a personal prototype: it does not provide cross-device accounts, account recovery, server-side sessions, or protection against someone with access to the same browser profile. Do not use it to protect sensitive data. A public multi-user release needs a dedicated authentication service and database.
+
+Before public launch, test the deployed site on Android and desktop, verify microphone and camera permissions, test Gemini and Groq independently, and confirm image generation is enabled for the Gemini project. This source package cannot activate API keys, deploy the service, or provide native Android wake-word/background functionality by itself.

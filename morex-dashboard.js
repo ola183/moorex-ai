@@ -60,7 +60,7 @@
   }
 
   async function askBackend(userText, atts = []) {
-    const endpoint = (window.MOREXAI_API_URL || "http://localhost:8787").replace(/\/$/, "");
+    const endpoint = (window.MOREXAI_API_URL || "").replace(/\/$/, "");
     const recent = sessionMessages.slice(-21, -1).map(m => ({ role: m.role, content: m.text }));
     // Memory is only sent to the configured backend as context for this request.
     const memories = window.MorexMemory ? window.MorexMemory.getAll().slice(0, 50) : [];
@@ -107,7 +107,7 @@
     const pending = messages.lastElementChild;
     pending?.classList.add("is-pending");
     try {
-      const endpoint = (window.MOREXAI_API_URL || "http://localhost:8787").replace(/\/$/, "");
+      const endpoint = (window.MOREXAI_API_URL || "").replace(/\/$/, "");
       const response = await fetch(endpoint + "/api/image", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt })
       });
@@ -342,6 +342,31 @@
       input.focus();
     });
   });
+
+  // Live backend status: the app is normally served by the same Node server as its API.
+  async function refreshBackendStatus() {
+    const card = document.querySelector(".connection-card");
+    if (!card) return;
+    const title = card.querySelector("strong");
+    const detail = card.querySelector("small");
+    const dot = card.querySelector(".connection-dot");
+    try {
+      const endpoint = (window.MOREXAI_API_URL || "").replace(/\/$/, "");
+      const response = await fetch(endpoint + "/api/health", { cache: "no-store" });
+      if (!response.ok) throw new Error("Backend unavailable");
+      const status = await response.json();
+      if (!status.ok) throw new Error("Backend unavailable");
+      if (title) title.textContent = "AI backend connected";
+      if (detail) detail.textContent = status.primaryConfigured ? (status.backupConfigured ? "Gemini primary · Groq backup" : "Gemini ready · no backup key") : "Backend online · API key needed";
+      if (dot) { dot.style.background = status.primaryConfigured ? "#57d6a0" : "#e6b86c"; dot.style.boxShadow = status.primaryConfigured ? "0 0 9px rgba(87,214,160,.55)" : "0 0 9px rgba(230,184,108,.5)"; }
+    } catch (_) {
+      if (title) title.textContent = "AI backend not connected";
+      if (detail) detail.textContent = "Check server deployment";
+      if (dot) { dot.style.background = "#e6b86c"; dot.style.boxShadow = "0 0 9px rgba(230,184,108,.5)"; }
+    }
+  }
+  refreshBackendStatus();
+  window.setInterval(refreshBackendStatus, 30000);
 
   // Personal greeting if a preferred name is already stored
   if (welcomeTitle && window.MorexMemory) {
