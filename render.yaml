@@ -3,8 +3,8 @@ services:
     name: moorex-ai
     runtime: node
     plan: free
-    buildCommand: npm install --prefix server
-    startCommand: npm start --prefix server
+    buildCommand: npm install
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
@@ -16,7 +16,7 @@ services:
       - key: GEMINI_MODEL
         value: gemini-2.5-flash
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: openai/gpt-oss-120b
       - key: GEMINI_IMAGE_MODEL
         value: gemini-2.5-flash-image
       - key: AI_TIMEOUT_MS

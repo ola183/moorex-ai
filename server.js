@@ -32,13 +32,15 @@ console.log("MorexAI serving frontend from:", appRoot, fs.existsSync(path.join(a
 // Serve /css, /js, /assets from their folders. If the folders are missing (files uploaded flat to
 // GitHub), fall back to the same-named file in the root, only for safe public file types.
 function serveFolder(name, exts) {
-  const flat = (req, res) => {
+  const dir = path.join(appRoot, name);
+  if (fs.existsSync(dir)) return express.static(dir, { fallthrough: false });
+  console.log(`Folder /${name} not found - serving its files from the root instead`);
+  return (req, res) => {
     const file = path.basename(decodeURIComponent(req.path));
     const full = path.join(appRoot, file);
     const ok = exts.includes(path.extname(file).toLowerCase()) && file !== "server.js" && fs.existsSync(full);
     return ok ? res.sendFile(full) : res.status(404).send("Not found");
   };
-  return [express.static(path.join(appRoot, name)), flat]; // folder first, then root fallback
 }
 app.use("/assets", serveFolder("assets", [".png", ".jpg", ".jpeg", ".webp", ".svg"]));
 app.use("/css", serveFolder("css", [".css"]));
@@ -107,7 +109,7 @@ async function callGemini(messages, systemText) {
 async function callGroq(messages, systemText) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("Groq key is not configured");
-  const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
   const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST", signal: timeoutSignal(),
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

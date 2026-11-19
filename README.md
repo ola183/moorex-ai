@@ -36,7 +36,7 @@ The browser page must be opened over HTTPS or localhost for secure browser featu
 
 ## Deploy as one Render web service
 
-This repository includes `render.yaml`. Connect the repository to Render and create the service from the Blueprint. Render installs dependencies from `server/package.json` and starts `server/server.js`; the same service serves the website and `/api/chat`, `/api/image`, and `/api/health`.
+This repository includes `render.yaml`. Connect the repository to Render and create the service from the Blueprint. Render installs dependencies from the root `package.json` and starts the root `server.js`; the same service serves the website and `/api/chat`, `/api/image`, and `/api/health`.
 
 In the Render service environment settings, add `GEMINI_API_KEY`. Add `GROQ_API_KEY` if you want the automatic backup provider. Do not put either key in `more.html`, JavaScript, GitHub, or a public `.env` file. The `.env.example` file contains placeholders only. After deployment, open the service URL and check `/api/health`; `primaryConfigured` and `backupConfigured` report whether each key is present, not whether the provider account has remaining quota.
 
