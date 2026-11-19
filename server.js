@@ -3,6 +3,7 @@
 "use strict";
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 const app = express();
 app.disable("x-powered-by");
@@ -25,7 +26,9 @@ app.use((req, res, next) => {
 
 // Serve the browser interface from this same service. Only public frontend
 // folders are exposed; server/.env and backend source files stay private.
-const appRoot = path.resolve(__dirname, "..");
+// Works whether server.js sits inside a /server folder or at the repo root.
+const appRoot = [path.resolve(__dirname, ".."), __dirname].find(d => fs.existsSync(path.join(d, "more.html"))) || __dirname;
+console.log("MorexAI serving frontend from:", appRoot, fs.existsSync(path.join(appRoot, "more.html")) ? "(more.html found)" : "(more.html MISSING)");
 app.use("/assets", express.static(path.join(appRoot, "assets"), { fallthrough: false }));
 app.use("/css", express.static(path.join(appRoot, "css"), { fallthrough: false }));
 app.use("/js", express.static(path.join(appRoot, "js"), { fallthrough: false }));
