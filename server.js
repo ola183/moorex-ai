@@ -5,6 +5,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
+const providers = require("./morex-providers");
 const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "24mb", strict: true }));
@@ -58,7 +59,8 @@ app.get("/api/health", (_req, res) => {
     primaryConfigured: Boolean(process.env.GEMINI_API_KEY),
     backup: "Groq",
     backupConfigured: Boolean(process.env.GROQ_API_KEY),
-    failover: "automatic"
+    failover: "automatic",
+    imageProviders: providers.imageProviderStatus()
   });
 });
 
@@ -81,29 +83,10 @@ function cleanMessages(messages, memoryText) {
   return { systemText, clean };
 }
 
-async function callGemini(messages, systemText) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("Gemini key is not configured");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  const contents = messages.map(m => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }, ...(m.attachments || []).map(a => ({ inlineData: { mimeType: a.mime, data: a.data } }))]
-  }));
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
-  const upstream = await fetch(url, {
-    method: "POST", signal: timeoutSignal(),
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemText }] },
-      contents,
-      generationConfig: { temperature: 0.7 }
-    })
-  });
-  const data = await upstream.json().catch(() => ({}));
-  if (!upstream.ok) throw new Error(data.error?.message || `Gemini HTTP ${upstream.status}`);
-  const reply = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
-  if (!reply) throw new Error("Gemini returned no text");
-  return { reply, model, provider: "Gemini" };
+// Gemini chat: the model is chosen at request time from what Google currently offers (see morex-providers.js),
+// so a retired model name can never take the app down.
+function callGemini(messages, systemText) {
+  return providers.callGeminiChat({ key: process.env.GEMINI_API_KEY, messages, systemText, timeoutSignal });
 }
 
 async function callGroq(messages, systemText) {
@@ -166,41 +149,17 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Image creation: Gemini image model through the same Gemini key. Set GEMINI_IMAGE_MODEL to change the model.
+// Image creation. Free providers first: Cloudflare FLUX (free daily allowance), then keyless Pollinations.
+// Gemini image models have no free tier, so they only run if GEMINI_IMAGE_ENABLED=true.
 app.post("/api/image", async (req, res) => {
   const prompt = String(req.body?.prompt || "").trim().slice(0, 800);
   if (!prompt) return res.status(400).json({ error: "Describe the image you want." });
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return res.status(503).json({ error: "Image creation needs the Gemini key on the server." });
-  const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
-    const upstream = await fetch(url, {
-      method: "POST", signal: AbortSignal.timeout(90000),
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
-      })
-    });
-    const data = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
-      const msg = data.error?.message || `Gemini HTTP ${upstream.status}`;
-      const planHint = /quota|limit|billing|exhausted|not found|not supported|permission/i.test(msg)
-        ? " Your Gemini key may not include image creation on its current plan, or the model name may have changed. Check GEMINI_IMAGE_MODEL in the server settings."
-        : "";
-      return res.status(upstream.status === 429 ? 429 : 502).json({ error: "Image creation failed: " + msg.slice(0, 220) + planHint });
-    }
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const img = parts.map(p => p.inlineData || p.inline_data).find(x => x?.data);
-    if (!img) {
-      const said = parts.map(p => p.text || "").join(" ").trim();
-      return res.status(422).json({ error: said ? "The AI did not make an image: " + said.slice(0, 200) : "The AI did not return an image. Try describing it differently." });
-    }
-    res.json({ image: img.data, mime: img.mimeType || img.mime_type || "image/png", model });
+    const result = await providers.generateImage(prompt);
+    res.json(result);
   } catch (err) {
     console.error("MorexAI image creation failed:", err.message);
-    res.status(503).json({ error: "Image creation failed: " + err.message });
+    res.status(err.status || 503).json({ error: err.message });
   }
 });
 

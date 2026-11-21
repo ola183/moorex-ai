@@ -13,11 +13,12 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
-      - key: GEMINI_MODEL
-        value: gemini-2.5-flash
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
-      - key: GEMINI_IMAGE_MODEL
-        value: gemini-2.5-flash-image
+      # Free image generation (Cloudflare Workers AI, FLUX.1 schnell). Free account, no card.
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
       - key: AI_TIMEOUT_MS
         value: 20000

@@ -1253,3 +1253,22 @@ body.orb-open .mode-pill { visibility: hidden; }
 
 /* Image generation studio */
 .image-generator-panel{width:min(100% - 32px,1040px);margin:28px auto;padding:22px;border:1px solid rgba(93,231,190,.22);border-radius:22px;background:linear-gradient(145deg,rgba(10,25,39,.96),rgba(5,12,24,.96));box-shadow:0 18px 50px rgba(0,0,0,.22);color:#eaf4f5}.image-generator-heading h2{margin:4px 0 8px;font-family:Orbitron, sans-serif}.image-generator-heading p:last-child,.image-generator-status{color:#9fb4c1}.image-generator-form{display:grid;gap:12px}.image-generator-form textarea{width:100%;min-height:88px;resize:vertical;padding:14px;border:1px solid rgba(111,221,196,.3);border-radius:13px;background:#071321;color:#f4fbff;font:inherit}.image-generate-button{width:auto;min-width:150px;padding:12px 20px;justify-self:start}.image-generate-button:disabled{opacity:.65;cursor:wait}.image-generator-result{display:grid;gap:12px;margin-top:16px}.image-generator-result img{display:block;width:100%;max-width:760px;height:auto;border-radius:16px;border:1px solid rgba(111,221,196,.25)}.image-generator-result a{justify-self:start;text-decoration:none}
+
+
+/* ===== Image generator lives inside the workspace panel (sidebar Tools / Settings), never in the avatar layout ===== */
+#morex-tool-parking { display: none; }
+#morex-subpanel-content .image-generator-panel { width: 100%; margin: 8px 0 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+#morex-subpanel-content .image-generator-heading { display: none; }
+#morex-subpanel-content .image-generator-form textarea { min-height: 96px; font-size: 14.5px; }
+#morex-subpanel-content .image-generator-status { font-size: 12.5px; line-height: 1.5; margin: 10px 0 0; }
+#morex-subpanel-content .image-generator-result img { max-width: 100%; max-height: 52vh; object-fit: contain; }
+.settings-open-images { width: 100%; margin: 4px 0 10px; }
+.image-generator-result[hidden] { display: none !important; }
+.image-generate-button { height: auto; min-height: 44px; background: #55d6a1; border-color: rgba(140,235,196,.6); color: #062015; font-weight: 700; box-shadow: 0 5px 18px rgba(85,214,161,.22); }
+.image-generate-button:hover { background: #8cebc4; }
+
+.image-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.image-download-button { background: #55d6a1; color: #062015; border-color: rgba(140,235,196,.6); font-weight: 700; padding: 9px 14px; cursor: pointer; }
+.image-download-button:hover { background: #8cebc4; }
+.image-download-hint { margin: 0; font-size: 11.5px; line-height: 1.5; color: #8fa3b8; }
+button.generated-download { cursor: pointer; background: transparent; font: inherit; font-size: 12.5px; }

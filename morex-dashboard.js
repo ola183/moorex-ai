@@ -87,7 +87,11 @@
     const mark = document.createElement("span"); mark.textContent = "✓";
     const box = document.createElement("div"); box.className = "generated-image";
     const img = document.createElement("img"); img.src = dataUrl; img.alt = prompt; img.loading = "lazy";
-    const link = document.createElement("a"); link.href = dataUrl; link.download = "moorex-image.png"; link.textContent = "Download image"; link.className = "generated-download";
+    const link = document.createElement("button"); link.type = "button"; link.textContent = "⬇ Download image"; link.className = "generated-download";
+    link.addEventListener("click", async () => {
+      try { if (window.MorexImage) await window.MorexImage.downloadDataUrl(dataUrl); else window.open(dataUrl, "_blank"); }
+      catch (_) { link.textContent = "Could not download. Press and hold the picture to save it."; }
+    });
     box.append(img, link);
     note.append(mark, box);
     messages.appendChild(note);
@@ -224,6 +228,7 @@
     memory: ["Memory", "User-controlled local memory — review, edit or delete anything."],
     files: ["Files & documents", "Send a PDF or text file and ask MOOREX about it. Word (.docx) files are not supported yet."],
     vision: ["Image & camera", "Take or choose a photo and ask MOOREX about it, or describe a picture for MOOREX to create. Needs internet."],
+    images: ["Image generator", "Describe a picture and MOOREX will create it. Needs internet."],
     settings: ["Settings", "Voice preferences are available below. Privacy and memory controls are in the Memory panel."]
   };
 
@@ -239,10 +244,13 @@
         <input class="setting-range" id="morex-setting-rate" type="range" min="0.7" max="1.3" step="0.1" value="${prefs.rate}">
         <div class="settings-section-head"><span class="settings-icon">✧</span><div><h3>Automatic workspace</h3><p>Save useful session history locally on this device.</p></div></div>
         <label class="setting-row"><span><strong>Save conversations automatically</strong><small>Save the current session when you leave or start a new chat</small></span><input id="morex-auto-save" type="checkbox" checked></label>
+        <div class="settings-section-head"><span class="settings-icon">✦</span><div><h3>Image generator</h3><p>Describe a picture and MOOREX will create it. Needs internet and the Gemini key on the server.</p></div></div>
+        <button type="button" class="vision-action settings-open-images" id="morex-settings-open-images"><span aria-hidden="true">✦</span><strong>Open image generator</strong><small>Create and download a picture</small></button>
         <div class="settings-section-head"><span class="settings-icon">⌁</span><div><h3>Safe automation</h3><p>MorexAI must ask before sensitive device actions. This protects your phone and data.</p></div></div>
         <label class="setting-row"><span><strong>Confirm sensitive actions</strong><small>Keep confirmation enabled for calls, messages, deletion and settings changes</small></span><input id="morex-confirm-actions" type="checkbox" checked></label>
         <p class="settings-footnote">Microphone input starts after you grant permission and tap the microphone. Continuous background wake-word listening requires the native Android app and a foreground service; this browser page cannot enable it by itself.</p>
       </section>`;
+    target.querySelector("#morex-settings-open-images")?.addEventListener("click", () => showPanel("images"));
     const rate = target.querySelector("#morex-setting-rate");
     const output = target.querySelector("#morex-setting-rate-value");
     const voiceStatus = target.querySelector("#morex-male-voice-status");
@@ -274,12 +282,7 @@
       '<p class="settings-footnote">Files are sent to the online AI only when you press send. Camera access is asked by your phone and only opens when you tap Take a photo.</p>';
     target.querySelectorAll("[data-tool]").forEach((btn) => btn.addEventListener("click", async () => {
       const tool = btn.dataset.tool;
-      if (tool === "create") {
-        showPanel("assistant");
-        input.value = "Create an image of ";
-        input.focus(); input.setSelectionRange(input.value.length, input.value.length);
-        return;
-      }
+      if (tool === "create") { showPanel("images"); return; }
       if (!window.MorexAttach) return;
       const count = await window.MorexAttach.pick(tool);
       if (count) { showPanel("assistant"); input.focus(); }
@@ -301,6 +304,10 @@
       contentArea.id = "morex-subpanel-content";
       subpanel.appendChild(contentArea);
     }
+    // The image generator lives in a parking area so clearing the panel never destroys it.
+    const generator = byId("morex-image-generator");
+    const parking = byId("morex-tool-parking");
+    if (generator && parking && generator.parentNode !== parking) parking.appendChild(generator);
     contentArea.innerHTML = "";
 
     if (name === "assistant") {
@@ -322,6 +329,8 @@
         renderAutomationSettings(contentArea);
       } else if (name === "vision" || name === "files") {
         renderToolPanel(contentArea, name);
+      } else if (name === "images" && generator) {
+        contentArea.appendChild(generator);
       }
     }
 
