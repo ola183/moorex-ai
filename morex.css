@@ -327,7 +327,8 @@ h1 { margin: 0; font-size: clamp(26px, 3.5vw, 37px); letter-spacing: -.045em; fo
 .lip-lower { clip-path: inset(41.7% 0 0 0); transform: translateY(calc(var(--jaw, 0) * 16%)); }
 .face-test { width: 100%; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 .face-test-title { margin: 0 0 8px; color: #71839e; font-size: 8px; letter-spacing: .16em; text-align: center; }
-.face-auto-note { margin: 0 0 9px; color: #8ea4c1; font-size: 9px; line-height: 1.5; text-align: center; }\n.face-test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.face-auto-note { margin: 0 0 9px; color: #8ea4c1; font-size: 9px; line-height: 1.5; text-align: center; }
+.face-test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .face-test-grid button {
   min-height: 30px; padding: 6px 4px; border: 1px solid rgba(117,157,211,.24); border-radius: 7px;
   background: rgba(7,16,30,.75); color: #aebfd7; font-size: 9px; cursor: pointer;

@@ -297,7 +297,6 @@
 
   function renderMemoryUI(container) {
     if (!container) return;
-
     const settings = getSettings();
     const memories = getMemories();
     const prefs = getPreferences();

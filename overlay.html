@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <div class="captions"><p class="user" id="u"></p><p class="reply" id="r">Waiting for MOOREX… open more.html in the same browser.</p></div>
+  <div class="captions"><p class="user" id="u"></p><p class="reply" id="r">Waiting for MOOREX… open more.html in the same browser or say “Hey MOOREX”.</p></div>
   <div class="stage" id="stage" role="button" tabindex="0" aria-label="Tap to speak or stop"><canvas id="c"></canvas></div>
   <p class="state" id="s">WAITING FOR MOOREX…</p>
   <script src="js/morex-orb-core.js"></script>
@@ -34,7 +34,7 @@
   "use strict";
   (() => {
     if (new URLSearchParams(location.search).get("bg") === "clear") document.body.classList.add("clear");
-    const LABELS = { idle: "TAP THE ORB TO SPEAK", listening: "LISTENING…", thinking: "THINKING…", speaking: "SPEAKING · TAP TO STOP", error: "TAP TO TRY AGAIN" };
+    const LABELS = { idle: "TAP THE ORB OR SAY “HEY MOOREX”", listening: "LISTENING…", thinking: "THINKING…", speaking: "SPEAKING · TAP TO STOP", error: "TAP TO TRY AGAIN" };
     let st = "idle", bump = 0, connected = false;
     const $ = (id) => document.getElementById(id);
     window.MorexOrbCore.start($("c"), { getState: () => st, getLevel: () => {
@@ -46,7 +46,8 @@
     if (!ch) { $("r").textContent = "This browser cannot link to MOOREX."; return; }
     ch.onmessage = (e) => {
       const m = e.data || {};
-      if (m.type === "state") { connected = true; st = m.state; $("s").textContent = LABELS[st] || LABELS.idle; }
+      if (m.type === "open" && m.greeting) { connected = true; $("u").textContent = ""; $("r").textContent = m.greeting; }
+      else if (m.type === "state") { connected = true; st = m.state; $("s").textContent = LABELS[st] || LABELS.idle; }
       else if (m.type === "caption") { connected = true; if (m.user) $("u").textContent = m.user; if (m.reply) $("r").textContent = m.reply; }
       else if (m.type === "interim") { $("u").textContent = m.text || ""; bump = performance.now() + 220; }
     };
